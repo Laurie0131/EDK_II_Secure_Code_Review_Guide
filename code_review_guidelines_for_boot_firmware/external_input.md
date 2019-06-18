@@ -105,51 +105,38 @@ The latest versions of EDK II also enable Executable Disable (XD) for memory add
 
 ### SMM Communication {#smm-communication}
 
-In [CanSecWest 2015](http://www.c7zero.info/stuff/ANewClassOfVulnInSMIHandlers_csw2015.pdf), a new class of SMM attack was disclosed. The attacker may construct a SMM communication buffer that points to memory owned by System Management RAM (SMRAM) or Virtual Machine Monitor (VMM), then pass this address into a System Management Interrupt (SMI) handler. This causes the SMI handler to perform the write for the attacker. This typically classified as a “confused deputy” attack.
+In [CanSecWest 2015](http://www.c7zero.info/stuff/ANewClassOfVulnInSMIHandlers_csw2015.pdf), a new class of SMM attack was disclosed. The attacker may construct a SMM communication buffer that points to memory owned by System Management RAM (SMRAM) or Virtual Machine Monitor (VMM), then pass this address into a System Management Interrupt (SMI) handler. This causes the SMI handler to perform the write for the attacker. This typically classified as a “confused deputy” attack. See the lines with `CommBuffer` 
+and with the  `CopyMem` statement below.
 
-=====================================
+---
 
+
+```
 SmmVariableHandler ()
-
-...
-
-SmmVariableFunctionHeader = (SMM_VARIABLE_COMMUNICATE_HEADER *)CommBuffer;
-
-switch (SmmVariableFunctionHeader-&gt;Function) {
-
-case SMM_VARIABLE_FUNCTION_GET_VARIABLE:
-
-SmmVariableHeader = (SMM_VARIABLE_COMMUNICATE_ACCESS_VARIABLE *)
-
-SmmVariableFunctionHeader-&gt;Data;
-
-Status = VariableServiceGetVariable (
-
-...
-
-(UINT8 *)SmmVariableHeader-&gt;Name + SmmVariableHeader-&gt;NameSize
-
-);
-
+//  ...
+  SmmVariableFunctionHeader = (SMM_VARIABLE_COMMUNICATE_HEADER *)CommBuffer;
+  switch (SmmVariableFunctionHeader->Function) {
+  case SMM_VARIABLE_FUNCTION_GET_VARIABLE:
+    SmmVariableHeader = (SMM_VARIABLE_COMMUNICATE_ACCESS_VARIABLE *)
+    SmmVariableFunctionHeader->Data;
+    Status = VariableServiceGetVariable (
+               ...
+               (UINT8 *)SmmVariableHeader->Name + SmmVariableHeader->NameSize
+               );
 }
 
 VariableServiceGetVariable (
-
-...
-
-OUT VOID *Data
-
-)
-
+  // ...
+  OUT VOID *Data
+  )
 {
-
-...
-
-CopyMem (Data, GetVariableDataPtr (Variable.CurrPtr), VarDataSize);
-
+ // ...
+  CopyMem (Data, GetVariableDataPtr (Variable.CurrPtr), VarDataSize);
 }
 
-=====================================
+```
+
+---
 
 To mitigate this attack, the SMI handler is required to use the library service SmmIsBufferOutsideSmmValid() to check the communication buffer before accessing it.
 
