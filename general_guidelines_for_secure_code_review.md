@@ -84,7 +84,7 @@ Reviewing the code involves three steps:
     6.  Can the code become inefficient (for example, O(N<sup>2</sup>)) due to some malformed data (for example, a hash table look-up becomes a list look-up)?
     7.  Are errors handled correctly?
 
-Other than #2.d and #2.e, all other rules apply to EDK II firmware.
+Other than #2.4 and #2.5, all other rules apply to EDK II firmware.
 
 Besides “A Process for Performing Security Code Reviews.”, Ransome provided some good suggestions in the book “Core Software Security: Security at the Source” on how to perform the SDL activity including security code review.
 
