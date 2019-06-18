@@ -43,73 +43,55 @@ After the password is used, the code should always clear it in its various locat
 
 ### Key based protection {#key-based-protection}
 
-In [BlackHat 2019](http://i.blackhat.com/asia-19/Fri-March-29/bh-asia-Matrosov-Modern-Secure-Boot-Attacks.pdf), Mastrov disclosed how to brute force search Computrace disable key in SMRAM. The key comparison algorithm does not have a constant time. Also, the final key is only 1 byte.
+In [BlackHat 2019](http://i.blackhat.com/asia-19/Fri-March-29/bh-asia-Matrosov-Modern-Secure-Boot-Attacks.pdf), Mastrov disclosed how to brute force search Computrace disable key in SMRAM. The key comparison algorithm does not have a constant time. Also, the final key is only 1 byte. See the statement using `key_match` below.
 
-=====================================
 
-key_byte = cpu_regs-&gt;EBX;
 
+```
+key_byte = cpu_regs->EBX;
 ComputraceState.Active = TRUE;
-
-ComputraceState.DisableSecreteKey[0] = key_byte &amp; 0xff;
-
-ComputraceState.DisableSecreteKey[1] = (key_byte &amp; 0xff00) &gt;&gt; 8;
-
-ComputraceState.DisableSecreteKey[2] = (key_byte &amp; 0xff0000) &gt;&gt; 16;
-
-ComputraceState.DisableSecreteKey[3] = (key_byte &amp; 0xff000000) &gt;&gt; 24;
+ComputraceState.DisableSecreteKey[0] = key_byte & 0xff;
+ComputraceState.DisableSecreteKey[1] = (key_byte & 0xff00) >> 8;
+ComputraceState.DisableSecreteKey[2] = (key_byte & 0xff0000) >> 16;
+ComputraceState.DisableSecreteKey[3] = (key_byte & 0xff000000) >> 24;
 
 key_match = TRUE;
-
-for (i = 0; i &lt; 4; i) {
-
-if (key[i] != ComputraceState.DisableKey[i]) {
-
-key_match = FALSE;
-
-break;
-
+for (i = 0; i < 4; i) {
+  if (key[i] != ComputraceState.DisableKey[i]) {
+    key_match = FALSE;
+    break;
+  }
 }
+```
 
-}
 
-=====================================
+
 
 This is a vulnerable inside channel attack. The duration of the verification then reveals the index of the character. The code should always use a mechanism that compares the entire data before completion. Note a single-byte key is vulnerable to brute force attack.
 
 ### Default key {#default-key}
 
-In [BlackHat 2011](https://media.blackhat.com/bh-us-11/Miller/BH_US_11_Miller_Battery_Firmware_Public_Slides.pdf), Accuvant Lab disclosed a way to access battery firmware because the access key is unchanged. The below disassembly code shows the 0x36720414 is hardcoded. It is also the default unseal key in a public document.
+In [BlackHat 2011](https://media.blackhat.com/bh-us-11/Miller/BH_US_11_Miller_Battery_Firmware_Public_Slides.pdf), Accuvant Lab disclosed a way to access battery firmware because the access key is unchanged. The below disassembly code shows the 0x36720414 is hardcoded. It is also the default unseal key in a public document. See statements below moving constants into `edx`
 
-=====================================
 
+```
 UnSeal_LSW:
-
 xor eax, eax
-
-mov edx, 414h
-
+mov edx, 0414h
 call writeSBWord
-
 test eax, eax
-
 jz short UnSeal_MSW
-
 ...
-
 UnSeal_MSW:
-
 xor eax, eax
-
 mov edx, 3672h
-
 call writeSBWord
-
 test eax, eax
-
 jz short loc_26FD
+```
 
-=====================================
+
+
 
 The vendor should always change the default password or key for a device to prevent illegal access. Also, it is not a good idea to hardcode the key in the source code.
 
