@@ -151,7 +151,7 @@ ACPI table for ACMAuthenticated Code Module (ACM) is a signed binary module deli
 ; (DWORD*)esi == ’DMAR’?
 
 667d: je 0x6697
-...
+; ...
 6697: mov  (%edi),%edi
 6699: mov  %edi,%es:0xa57
 ; var_a57 = &dmar
@@ -164,7 +164,7 @@ ACPI table for ACMAuthenticated Code Module (ACM) is a signed binary module deli
 66a6: mov  %ecx,%es:0xa5b
 ; var_a5b = &dmar + dmar.len
 
-...
+; ...
 6701: mov  %es:0xa47,%edi
 ; edi = var_a47 (memory on the TXT heap)
 
@@ -175,13 +175,14 @@ ACPI table for ACMAuthenticated Code Module (ACM) is a signed binary module deli
 6711: sub %es:0xa57,%ebx
 ; ebx = dmar.len
 
-...
+; ...
 6738: mov %es:0xa57,%esi
 ; var_a57 = &dmar
 
 673f: mov %ebx, %ecx
 6741: rep movsb %ds:(%esi),%es:(%edi)
 ; memcpy (var_a47, dmar, dmar.len)
+
 ```
 
 
