@@ -50,7 +50,7 @@ External input describes data that can be controlled by an attacker. Examples in
 [At BlackHat 2009](https://www.blackhat.com/presentations/bh-usa-09/WOJTCZUK/BHUSA09-Wojtczuk-AtkIntelBios-SLIDES.pdf), Invisible Things Lab demonstrated how to use a buffer overflow in BMP file processing to construct an attack and flash a new firmware. The BMP file is an external input where an attacker may input a large value for `PixelWidth` and `PixelHeight`. This causes `BltBufferSize` to overflow and results in a very small number. This is a typical integer overflow caused by multiplication.
 
 =====================================
-
+<hr>
 
 
 ```
