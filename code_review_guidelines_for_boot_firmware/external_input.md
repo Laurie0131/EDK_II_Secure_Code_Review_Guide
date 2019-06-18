@@ -49,6 +49,8 @@ External input describes data that can be controlled by an attacker. Examples in
 
 [At BlackHat 2009](https://www.blackhat.com/presentations/bh-usa-09/WOJTCZUK/BHUSA09-Wojtczuk-AtkIntelBios-SLIDES.pdf), Invisible Things Lab demonstrated how to use a buffer overflow in BMP file processing to construct an attack and flash a new firmware. The BMP file is an external input where an attacker may input a large value for `PixelWidth` and `PixelHeight`. This causes `BltBufferSize` to overflow and results in a very small number. This is a typical integer overflow caused by multiplication.
 
+=====================================
+
 
 
 ```
@@ -65,10 +67,13 @@ EFI_STATUS ConvertBmpToGopBlt ()
     *GopBltSize = BltBufferSize;
     *GopBlt = EfiLibAllocatePool (*GopBltSize);
 ```
+=====================================
+
 
 
 To handle these cases, code should check for integer overflow using division, as shown below:
 
+=====================================
 
 ```
 if (BmpHeader-&gt;PixelWidth &gt; MAX_UINT / sizeof 
@@ -77,6 +82,8 @@ if (BmpHeader-&gt;PixelWidth &gt; MAX_UINT / sizeof
 
 }
 ```
+=====================================
+
 
 
 ### SMM Callout {#smm-callout}
@@ -85,18 +92,24 @@ At [Black Hat DC 2009](https://www.blackhat.com/presentations/bh-dc-09/Wojtczuk_
 
 
 
+=====================================
+
 
 ```
 mov [ACPINV+x], %rax
 call *0x18(%rax)
 
 ```
+=====================================
+
 
 
 A similar issue is also found in [ThinkPad 2016](http://blog.cr4.sh/2016/06/exploring-and-exploiting-lenovo.html). The `SmmRuntimeCallHandle` is the pointer in ACPI Reserved memory. As such, the attacker may replace this function pointer with any address. 
 This is shown in the line with the statement with `RtServices` below.
 
 
+
+=====================================
 
 
 ```
@@ -125,6 +138,8 @@ SmmRuntimeManagementCallback (
 }
 
 ```
+=====================================
+
 
 
 
@@ -143,6 +158,8 @@ communication buffer that points to memory owned by System Management RAM (SMRAM
 and with the  `CopyMem` statement below.
 
 
+
+=====================================
 
 
 ```
@@ -169,6 +186,8 @@ VariableServiceGetVariable (
 }
 
 ```
+=====================================
+
 
 
 To mitigate this attack, the SMI handler is required to use the library service SmmIsBufferOutsideSmmValid() to check the communication buffer before accessing it.
@@ -176,9 +195,11 @@ To mitigate this attack, the SMI handler is required to use the library service 
 ACPI table for ACMAuthenticated Code Module (ACM) is a signed binary module delivered by Intel. It is used to construct a dynamic root of trust for measurement (DRTM) 
 environment. In 2011, Invisible Things Lab disclosed [a way to hijack the SINIT ACM](https://invisiblethingslab.com/resources/2011/Attacking_Intel_TXT_via_SINIT_hijacking.pdf). 
 The issue happens when the ACM code parses the untrusted ACPI DMA Remapping (DMAR) table. The DMAR table is used before validation of the address. As such the attacker may 
-control the copied memory length and override the Intel Trusted Executable Technology (TXT) heap and SINIT ACM itself. See line 6741 below.
+control the copied memory length and override the Intel Trusted Executable Technology (TXT) heap and SINIT ACM itself. See line `6741` below.
 
 
+
+=====================================
 
 
 ```
@@ -219,6 +240,8 @@ control the copied memory length and override the Intel Trusted Executable Techn
 6741: rep movsb %ds:(%esi),%es:(%edi)
 ; memcpy (var_a47, dmar, dmar.len)
 ```
+=====================================
+
 
 
 
@@ -234,6 +257,8 @@ This is another example of an integer overflow. **NOTE**: `MemorySize if` statem
 
 
 
+
+=====================================
 
 
 ```
@@ -269,6 +294,8 @@ GetCapsuleInfo (
   ...
 }
 ```
+=====================================
+
 
 
 
@@ -288,6 +315,8 @@ See the use of `EntryFunc`  and `EntryPoint` below.
 
 
 
+=====================================
+
 
 ```
 BootScriptExecuteDispatch (IN UINT8 *Script)
@@ -298,6 +327,8 @@ BootScriptExecuteDispatch (IN UINT8 *Script)
 }
 
 ```
+=====================================
+
 
 
 As a mitigation, the lockbox should be used to protect data used in the S3 resume phase.
@@ -309,7 +340,7 @@ See the use of `strncmp` and `response.length` below.
 
 
 
-
+=====================================
 
 ```
 /* NETSTACK_CODE:20431FC8 */
@@ -320,6 +351,8 @@ if(strncmp(computed_response, response.value, response.length))
 }
 return 0;
 ```
+=====================================
+
 
 
 
