@@ -15,102 +15,88 @@ External input describes data that can be controlled by an attacker. Examples in
 
 [At BlackHat 2009](https://www.blackhat.com/presentations/bh-usa-09/WOJTCZUK/BHUSA09-Wojtczuk-AtkIntelBios-SLIDES.pdf), Invisible Things Lab demonstrated how to use a buffer overflow in BMP file processing to construct an attack and flash a new firmware. The BMP file is an external input where an attacker may input a large value for PixelWidth and PixelHeight. This causes BltBufferSize to overflow and results in a very small number. This is a typical integer overflow caused by multiplication.
 
-=====================================
+---
 
+
+```
 EFI_STATUS ConvertBmpToGopBlt ()
-
 {
+ /// ...
+  if (BmpHeader->CharB != 'B' || BmpHeader->CharM != 'M') {
+    return EFI_UNSUPPORTED;
+  }
+  BltBufferSize = BmpHeader->PixelWidth * BmpHeader->PixelHeight
+                    * sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL);
+  IsAllocated = FALSE;
+  if (*GopBlt == NULL) {
+    *GopBltSize = BltBufferSize;
+    *GopBlt = EfiLibAllocatePool (*GopBltSize);
+```
 
-...
+---
 
-if (BmpHeader-&gt;CharB != &#039;B&#039; || BmpHeader-&gt;CharM != &#039;M&#039;) {
-
-return EFI_UNSUPPORTED;
-
-}
-
-BltBufferSize = BmpHeader-&gt;PixelWidth * BmpHeader-&gt;PixelHeight
-
-* sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL);
-
-IsAllocated = FALSE;
-
-if (*GopBlt == NULL) {
-
-*GopBltSize = BltBufferSize;
-
-*GopBlt = EfiLibAllocatePool (*GopBltSize);
-
-=====================================
 
 To handle these cases, code should check for integer overflow using division, as shown below:
 
-=====================================
 
-if (BmpHeader-&gt;PixelWidth &gt; MAX_UINT / sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL) / BmpHeader-&gt;PixelHeight) {
-
-return EFI_INVALID_PARAMETER;
+---
+```
+if (BmpHeader-&gt;PixelWidth &gt; MAX_UINT / sizeof 
+(EFI_GRAPHICS_OUTPUT_BLT_PIXEL) / BmpHeader-&gt;PixelHeight) {
+    return EFI_INVALID_PARAMETER;
 
 }
-
-=====================================
-
+```
+---
 ### SMM Callout {#smm-callout}
 
 At [Black Hat DC 2009](https://www.blackhat.com/presentations/bh-dc-09/Wojtczuk_Rutkowska/BlackHat-DC-09-Rutkowska-Attacking-Intel-TXT-slides.pdf), Invisible Things Lab demonstrated a way to inject code into SMM. The SMM code referenced a function pointer in Advanced Configuration and Power Interface (ACPI) Non-Volatile Storage (NVS) memory and invoked this function address. An attacker may modify the function pointer address in ACPI NVS so it points to a malicious function.
 
-=====================================
+---
 
+
+```
 mov [ACPINV+x], %rax
-
 call *0x18(%rax)
 
-=====================================
+```
+---
 
-A similar issue is also found in [ThinkPad 2016](http://blog.cr4.sh/2016/06/exploring-and-exploiting-lenovo.html). The SmmRuntimeCallHandle is the pointer in ACPI Reserved memory. As such, the attacker may replace this function pointer with any address.
+A similar issue is also found in [ThinkPad 2016](http://blog.cr4.sh/2016/06/exploring-and-exploiting-lenovo.html). The SmmRuntimeCallHandle is the pointer in ACPI Reserved memory. As such, the attacker may replace this function pointer with any address. This is shown in the line with the statement with `RtServices` below.
 
-=====================================
 
+---
+
+
+```
 EFI_STATUS
-
 EFIAPI
-
 SmmRuntimeManagementCallback (
-
-IN EFI_HANDLE SmmImageHandle,
-
-IN OUT VOID *CommunicationBuffer,
-
-IN OUT UINTN *SourceSize
-
-)
-
+  IN EFI_HANDLE             SmmImageHandle,
+  IN OUT VOID               *CommunicationBuffer,
+  IN OUT UINTN              *SourceSize
+  )
 {
+  SMM_RUNTIME_COMMUNICATION_STRUCTURE *SmmRtStruct;
+  EFI_SMM_RT_CALLBACK_SERVICES        *RtServices;
 
-SMM_RUNTIME_COMMUNICATION_STRUCTURE *SmmRtStruct;
+  RtServices  = NULL;
 
-EFI_SMM_RT_CALLBACK_SERVICES *RtServices;
+  SmmRtStruct = (SMM_RUNTIME_COMMUNICATION_STRUCTURE *) CommunicationBuffer;
+  RtServices  = (EFI_SMM_RT_CALLBACK_SERVICES *) SmmRtStruct->PrivateData.SmmRuntimeCallHandle;
 
-RtServices = NULL;
+  if (RtServices != NULL) {
+    RtServices->CallbackFunction (RtServices->Context, mSmst, (VOID *) &SmmRtStruct->PrivateData);
+    SmmRtStruct->PrivateData.SmmRuntimeCallHandle = NULL;
+  }
 
-SmmRtStruct = (SMM_RUNTIME_COMMUNICATION_STRUCTURE *) CommunicationBuffer;
-
-RtServices = (EFI_SMM_RT_CALLBACK_SERVICES *) SmmRtStruct-&gt;PrivateData.SmmRuntimeCallHandle;
-
-if (RtServices != NULL) {
-
-RtServices-&gt;CallbackFunction (RtServices-&gt;Context, mSmst, (VOID *) &amp;SmmRtStruct-&gt;PrivateData);
-
-SmmRtStruct-&gt;PrivateData.SmmRuntimeCallHandle = NULL;
-
+  return EFI_SUCCESS;
 }
 
-return EFI_SUCCESS;
+```
 
-}
 
-=====================================
-
+---
 It is critical that SMM never reference memory outside System Management RAM (SMRAM) for function pointers.
 
 In the latest Intel processors, the SMM_Code_Access_Chk feature can be used to block code execution outside of the value set by the SMRAM Range Register (SMRR). This feature MUST be enabled if it is supported.
