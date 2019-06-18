@@ -84,7 +84,7 @@ if (BmpHeader-&gt;PixelWidth &gt; MAX_UINT / sizeof
 
 ### SMM Callout {#smm-callout}
 
-At [Black Hat DC 2009](https://www.blackhat.com/presentations/bh-dc-09/Wojtczuk_Rutkowska/BlackHat-DC-09-Rutkowska-Attacking-Intel-TXT-slides.pdf), Invisible Things Lab demonstrated a way to inject code into SMM. The SMM code referenced (`ACPINV` below) a function pointer in Advanced Configuration and Power Interface (ACPI) Non-Volatile Storage (NVS) memory and invoked this function address. An attacker may modify the function pointer address in ACPI NVS so it points to a malicious function.
+At [Black Hat DC 2009](https://www.blackhat.com/presentations/bh-dc-09/Wojtczuk_Rutkowska/BlackHat-DC-09-Rutkowska-Attacking-Intel-TXT-slides.pdf), Invisible Things Lab demonstrated a way to inject code into SMM. The SMM code referenced (``ACPINV`` below) a function pointer in Advanced Configuration and Power Interface (ACPI) Non-Volatile Storage (NVS) memory and invoked this function address. An attacker may modify the function pointer address in ACPI NVS so it points to a malicious function.
 
 
 
@@ -182,9 +182,9 @@ VariableServiceGetVariable (
 ```
 
 
-To mitigate this attack, the SMI handler is required to use the library service SmmIsBufferOutsideSmmValid() to check the communication buffer before accessing it.
+To mitigate this attack, the SMI handler is required to use the library service `SmmIsBufferOutsideSmmValid()` to check the communication buffer before accessing it.
 
-ACPI table for ACMAuthenticated Code Module (ACM) is a signed binary module delivered by Intel. It is used to construct a dynamic root of trust for measurement (DRTM) 
+ACPI table for Authenticated Code Module (ACM) is a signed binary module delivered by Intel. It is used to construct a dynamic root of trust for measurement (DRTM) 
 environment. In 2011, Invisible Things Lab disclosed [a way to hijack the SINIT ACM](https://invisiblethingslab.com/resources/2011/Attacking_Intel_TXT_via_SINIT_hijacking.pdf). 
 The issue happens when the ACM code parses the untrusted ACPI DMA Remapping (DMAR) table. The DMAR table is used before validation of the address. As such the attacker may 
 control the copied memory length and override the Intel Trusted Executable Technology (TXT) heap and SINIT ACM itself. See line `6741` below.
