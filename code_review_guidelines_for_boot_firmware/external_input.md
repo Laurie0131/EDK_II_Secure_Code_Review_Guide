@@ -52,7 +52,7 @@ External input describes data that can be controlled by an attacker. Examples in
 ---
 
 
-```C++
+```
 EFI_STATUS ConvertBmpToGopBlt ()
 {
  /// ...
