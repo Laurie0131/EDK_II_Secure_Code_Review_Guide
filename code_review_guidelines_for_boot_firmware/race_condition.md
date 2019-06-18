@@ -33,8 +33,8 @@
 
 There are two typical race conditions found in firmware:
 
-*   *   1.  Race condition in a data buffer
-        2.  Race condition in a register unlocking mechanism.
+ 1.  Race condition in a data buffer
+ 2.  Race condition in a register unlocking mechanism.
 
 **Previous Vulnerabilities:**
 

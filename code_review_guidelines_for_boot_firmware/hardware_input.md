@@ -39,15 +39,11 @@ Hardware input is a special class of external input. If an attacker controls har
 
 In [BlackHat 2008](https://invisiblethingslab.com/resources/bh08/part2-full.pdf), Invisible Things Lab demonstrated how to program the remap Base Address Register (BAR) to make the remap memory overlap with VMM or SMRAM, thus allowing for subsequent modification of the VMM or SMRAM contents.
 
-=====================================
-
+```
 pci_write_word (dev, TOUUD_OFFSET, (new_remap_limit+1)&lt;&lt;6);
-
 pci_write_word (dev, REMAP_BASE_OFFSET, new_remap_base);
-
 pci_write_word (dev, REMAP_LIMIT_OFFSET, new_remap_limit);
-
-=====================================
+```
 
 In [BlackHat 2009](https://invisiblethingslab.com/resources/bh09usa/Ring%20-3%20Rootkits.pdf), Invisible Tings Lab also found the remap register bar can make the remap memory overlap with Management Engine (ME) RAM, thus allowing for a modification of the contents in ME firmware.
 
@@ -56,68 +52,55 @@ To mitigate this class of attack, verify register bars are properly locked
 ### MMIO BAR Access {#mmio-bar-access}
 
 In [RECon 2017](http://www.c7zero.info/stuff/REConBrussels2017_BARing_the_system.pdf), Intel disclosed the MMIO BAR access issue in SMM. The attacker may configure the MMIO BAR to make it overlap with SMRAM. After this, subsequent access to MMIO in SMM becomes accesses to SMRAM.
+See statements with `bar` assignment within `if` statement below.
 
-=====================================
+
+```
 
 static void mainboard_smi_brightness_down (void)
-
 {
-
-u8 *bar;
-
-if ((bar = (u8 *)pci_read_config32(PCI_DEV(1, 0, 0), 0x18))) {
-
-printk(BIOS_DEBUG, “bar: %08X, level %02X\n”, (unsigned int)bar,
-
-*(bar+LVTMA_BL_MOD_LEVEL) &amp;= 0xf0;
-
-if (*(bar+LVTMA_BL_MOD_LEVEL) &gt; 0x10)
-
-*(bar+LVTMA_BL_MOD_LEVEL) -= 0x10;
-
+  u8 *bar;
+  if ((bar = (u8 *)pci_read_config32(PCI_DEV(1, 0, 0), 0x18))) {
+    printk(BIOS_DEBUG, “bar: %08X, level %02X\n”, (unsigned int)bar,
+    *(bar+LVTMA_BL_MOD_LEVEL) &amp;= 0xf0;
+    if (*(bar+LVTMA_BL_MOD_LEVEL) &gt; 0x10)
+      *(bar+LVTMA_BL_MOD_LEVEL) -= 0x10;
+  }
 }
+```
 
-}
 
-=====================================
+
+
 
 There are several ways for firmware to mitigate this class of attack. For example, SMM can verify the MMIO bar does not overlap with SMRAM or is not in DRAM before access. SMM can revert the MMIO bar value to the default setting, perform an operation, then restore it to the original value.
 
-Care must be taken when code checks the MMIO. In 2009, Invisible Things Lab showed an [incorrect check for MMIO BAR](https://invisiblethingslab.com/resources/misc09/Another%20TXT%20Attack.pdf). This code checks the Memory Controller Hub (MCH) BAR value, but only for the lower 32 bits. Since the MCH BAR is 36 bits, the attacker may configure the MCH BAR value above 4G and exploit ACM due to the error in validation. This can results in an improper setup for the Intel® Virtualization Technology for Direct I/O (Intel® VT-d) engine.
+Care must be taken when code checks the MMIO. In 2009, Invisible Things Lab showed an [incorrect check for MMIO BAR](https://invisiblethingslab.com/resources/misc09/Another%20TXT%20Attack.pdf). This code checks the Memory Controller Hub (MCH) BAR value, but only for the lower 32 bits. Since the MCH BAR is 36 bits, the attacker may configure the MCH BAR value above 4G and exploit ACM due to the error in validation. This can results in an improper setup for the Intel® Virtualization Technology for Direct I/O (Intel® VT-d) engine. 
+See the usage of `MCHBAR address` below
 
-=====================================
 
+
+```
 pusha
-
 mov eax, 0x48 ; MCHBAR address
-
 call pci_get_long
-
 and ebx, 0xfffffffe
-
 mov DWORD PTR es:MCHBAR, ebx
-
 cmp ebx, 0xfec04000
-
 ja continue
-
 mov al, 0x4
-
 mov ah, 0xc
-
 call sinit_error
-
 continue:
-
 or ebx, 0x1
-
 call pci_write_long
-
 popa
-
 ret
+```
 
-=====================================
+
+
+
 
 ### Cache {#cache}
 
@@ -139,38 +122,26 @@ USB firmware drivers must assume USB descriptors are untrustworthy and always ve
 
 ### TPM Genie {#tpm-genie}
 
-In 2018, the NCC group demonstrated that a [Trusted Platform Module (TPM) Genie](https://github.com/nccgroup/TPMGenie/blob/master/docs/CanSecWest_2018_-_TPM_Genie_-_Jeremy_Boone.pdf) may cause memory corruption in different TPM stacks, including Linux, tboot, and UEFI. This is possible when data returned by the TPM is not validated by the TPM stack.
+In 2018, the NCC group demonstrated that a [Trusted Platform Module (TPM) Genie](https://github.com/nccgroup/TPMGenie/blob/master/docs/CanSecWest_2018_-_TPM_Genie_-_Jeremy_Boone.pdf) may cause memory corruption in different TPM stacks, including Linux, tboot, and UEFI. This is possible when data returned by the TPM is not validated by the TPM stack.  See the usage of `recd` in the statements below.
 
-=====================================
 
+```
 int tpm_get_random(u32 chip_num, u8 *out, size_t max) {
-
-struct tpm_chip *chip;
-
-struct tpm_cmd_t tpm_cmd;
-
-u32 recd, num_bytes = min_t(u32, max, TPM_MAX_RNG_DATA);
-
-...
-
-tpm_cmd.header.in = tpm_getrandom_header;
-
-tpm_cmd.params.getrandom_in.num_bytes = cpu_to_be32(num_bytes);
-
-err = tpm_transmit_cmd( chip, &amp;tpm_cmd,
-
-TPM_GETRANDOM_RESULT_SIZE + num_bytes );
-
-...
-
-recd = be32_to_cpu(tpm_cmd.params.getrandom_out.rng_data_len);
-
-memcpy(out, tpm_cmd.params.getrandom_out.rng_data, recd);
-
-...
-
+  struct tpm_chip *chip;
+  struct tpm_cmd_t tpm_cmd;
+  u32 recd, num_bytes = min_t(u32, max, TPM_MAX_RNG_DATA);
+  ...
+  tpm_cmd.header.in = tpm_getrandom_header;
+  tpm_cmd.params.getrandom_in.num_bytes = cpu_to_be32(num_bytes);
+  err = tpm_transmit_cmd( chip, &amp;tpm_cmd,
+  TPM_GETRANDOM_RESULT_SIZE + num_bytes );
+  ...
+  recd = be32_to_cpu(tpm_cmd.params.getrandom_out.rng_data_len);
+  memcpy(out, tpm_cmd.params.getrandom_out.rng_data, recd);
+  ...
 }
 
-=====================================
+```
+
 
 As mitigation, the TPM driver must perform robust checks of the response buffer size.
