@@ -1,0 +1,85 @@
+## Secret Handling {#secret-handling}
+
+In some cases, the users are required to input passwords in the firmware, such as setup administrator password, hard drive password, and Trusted Computing Group (TCG) OPAL password. Sometimes the firmware also includes some password or access key. We need a good way to handle these secrets.
+
+**Previous Vulnerabilities:**
+
+### Password not cleared in memory {#password-not-cleared-in-memory}
+
+In [DefCon 2008](https://www.defcon.org/images/defcon-16/dc16-presentations/brossard/defcon-16-brossard-wp.pdf), iViZ disclosed a way to get the password from the BIOS Data Area (BDA) because the BIOS does not clear the keyboard buffer which contains the password information.
+
+After the password is used, the code should always clear it in its various locations: input key buffer, stack, heap, global variable, etc.
+
+### Key based protection {#key-based-protection}
+
+In [BlackHat 2019](http://i.blackhat.com/asia-19/Fri-March-29/bh-asia-Matrosov-Modern-Secure-Boot-Attacks.pdf), Mastrov disclosed how to brute force search Computrace disable key in SMRAM. The key comparison algorithm does not have a constant time. Also, the final key is only 1 byte.
+
+=====================================
+
+key_byte = cpu_regs-&gt;EBX;
+
+ComputraceState.Active = TRUE;
+
+ComputraceState.DisableSecreteKey[0] = key_byte &amp; 0xff;
+
+ComputraceState.DisableSecreteKey[1] = (key_byte &amp; 0xff00) &gt;&gt; 8;
+
+ComputraceState.DisableSecreteKey[2] = (key_byte &amp; 0xff0000) &gt;&gt; 16;
+
+ComputraceState.DisableSecreteKey[3] = (key_byte &amp; 0xff000000) &gt;&gt; 24;
+
+key_match = TRUE;
+
+for (i = 0; i &lt; 4; i) {
+
+if (key[i] != ComputraceState.DisableKey[i]) {
+
+key_match = FALSE;
+
+break;
+
+}
+
+}
+
+=====================================
+
+This is a vulnerable inside channel attack. The duration of the verification then reveals the index of the character. The code should always use a mechanism that compares the entire data before completion. Note a single-byte key is vulnerable to brute force attack.
+
+### Default key {#default-key}
+
+In [BlackHat 2011](https://media.blackhat.com/bh-us-11/Miller/BH_US_11_Miller_Battery_Firmware_Public_Slides.pdf), Accuvant Lab disclosed a way to access battery firmware because the access key is unchanged. The below disassembly code shows the 0x36720414 is hardcoded. It is also the default unseal key in a public document.
+
+=====================================
+
+UnSeal_LSW:
+
+xor eax, eax
+
+mov edx, 414h
+
+call writeSBWord
+
+test eax, eax
+
+jz short UnSeal_MSW
+
+...
+
+UnSeal_MSW:
+
+xor eax, eax
+
+mov edx, 3672h
+
+call writeSBWord
+
+test eax, eax
+
+jz short loc_26FD
+
+=====================================
+
+The vendor should always change the default password or key for a device to prevent illegal access. Also, it is not a good idea to hardcode the key in the source code.
+
+Another example in TPM2, during boot, the platform should always send Tpm2HierarchyChangeAuth(TPM_RH_PLATFORM) command to a TPM2 device to prevent other code accessing the TPM2 platform hierarchy. The same action must be done in S3 resume too.

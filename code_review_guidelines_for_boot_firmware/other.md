@@ -1,0 +1,5 @@
+## **Other** {#other}
+
+As a final note, firmware must not contain any “back door” access mechanisms. Attackers have experience in reverse engineering, making back doors easy to detect. This is especially important for code related to SMI handlers, UEFI variables, or key management.
+
+In [BlackHat 2018](http://i.blackhat.com/us-18/Thu-August-9/us-18-Domas-God-Mode-Unlocked-Hardware-Backdoors-In-x86-CPUs.pdf), Domas demonstrated how to find a hidden instruction to gain supervisor privileges in user mode. He used fuzzing to scan the system and found a special “God Mode Bit” (MSR 1107, BIT 0). Toggling this bit activated a launch instruction (0F03). By using a co-located core with unrestricted access to the core register file, software can send content via Ring3 to modify a Ring0 register and obtain hardware privilege escalation.
