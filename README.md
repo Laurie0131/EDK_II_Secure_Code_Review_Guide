@@ -29,6 +29,7 @@
 
 -->
 
+
 <img src="media/TianocoreTitlePageLogo.jpg" width="300" />
 
 # EDK II Secure Code Review Guide {#edk-ii-secure-code-review-guide}
