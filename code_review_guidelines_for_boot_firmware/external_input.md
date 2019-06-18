@@ -140,63 +140,52 @@ VariableServiceGetVariable (
 
 To mitigate this attack, the SMI handler is required to use the library service SmmIsBufferOutsideSmmValid() to check the communication buffer before accessing it.
 
-ACPI table for ACMAuthenticated Code Module (ACM) is a signed binary module delivered by Intel. It is used to construct a dynamic root of trust for measurement (DRTM) environment. In 2011, Invisible Things Lab disclosed [a way to hijack the SINIT ACM](https://invisiblethingslab.com/resources/2011/Attacking_Intel_TXT_via_SINIT_hijacking.pdf). The issue happens when the ACM code parses the untrusted ACPI DMA Remapping (DMAR) table. The DMAR table is used before validation of the address. As such the attacker may control the copied memory length and override the Intel Trusted Executable Technology (TXT) heap and SINIT ACM itself.
+ACPI table for ACMAuthenticated Code Module (ACM) is a signed binary module delivered by Intel. It is used to construct a dynamic root of trust for measurement (DRTM) environment. In 2011, Invisible Things Lab disclosed [a way to hijack the SINIT ACM](https://invisiblethingslab.com/resources/2011/Attacking_Intel_TXT_via_SINIT_hijacking.pdf). The issue happens when the ACM code parses the untrusted ACPI DMA Remapping (DMAR) table. The DMAR table is used before validation of the address. As such the attacker may control the copied memory length and override the Intel Trusted Executable Technology (TXT) heap and SINIT ACM itself. See line 6741 below.
 
-=====================================
+---
 
-6675: mov (%edi),%esi
 
+```
+6675: mov  (%edi),%esi
 6677: cmpl $0x52414d44,(%esi)
-
 ; (DWORD*)esi == ’DMAR’?
 
 667d: je 0x6697
-
 ...
+6697: mov  (%edi),%edi
+6699: mov  %edi,%es:0xa57
+; var_a57 = &dmar
 
-6697: mov (%edi),%edi
-
-6699: mov %edi,%es:0xa57
-
-; var_a57 = &amp;dmar
-
-66a0: mov 0x4(%edi),%ecx; ecx = dmar.len
+66a0: mov  0x4(%edi),%ecx
+; ecx = dmar.len
 
 66a3: push %ecx
-
-66a4: add %edi,%ecx
-
-66a6: mov %ecx,%es:0xa5b
-
-; var_a5b = &amp;dmar + dmar.len
+66a4: add  %edi,%ecx
+66a6: mov  %ecx,%es:0xa5b
+; var_a5b = &dmar + dmar.len
 
 ...
-
-6701: mov %es:0xa47,%edi
-
+6701: mov  %es:0xa47,%edi
 ; edi = var_a47 (memory on the TXT heap)
 
-6708: mov (%edi),%eax
-
-670a: mov %es:0xa5b,%ebx
-
-; ebx = &amp;dmar + dmar.len
+6708: mov  (%edi),%eax
+670a: mov  %es:0xa5b,%ebx
+; ebx = &dmar + dmar.len
 
 6711: sub %es:0xa57,%ebx
-
 ; ebx = dmar.len
 
 ...
-
-6738: mov %es:0xa57,%esi; var_a57 = &amp;dmar
+6738: mov %es:0xa57,%esi
+; var_a57 = &dmar
 
 673f: mov %ebx, %ecx
-
 6741: rep movsb %ds:(%esi),%es:(%edi)
-
 ; memcpy (var_a47, dmar, dmar.len)
+```
 
-=====================================
+
+---
 
 Adding a check for the length field of untrusted data source is mandatory.
 
