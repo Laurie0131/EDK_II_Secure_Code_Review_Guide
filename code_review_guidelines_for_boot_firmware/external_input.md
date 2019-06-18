@@ -140,7 +140,7 @@ VariableServiceGetVariable (
 
 To mitigate this attack, the SMI handler is required to use the library service SmmIsBufferOutsideSmmValid() to check the communication buffer before accessing it.
 
-ACPI table for ACMAuthenticated Code Module (ACM) is a signed binary module delivered by Intel. It is used to construct a dynamic root of trust for measurement (DRTM) environment. In 2011, Invisible Things Lab disclosed [a way to hijack the SINIT ACM](https://invisiblethingslab.com/resources/2011/Attacking_Intel_TXT_via_SINIT_hijacking.pdf). The issue happens when the ACM code parses the untrusted ACPI DMA Remapping (DMAR) table. The DMAR table is used before validation of the address. As such the attacker may control the copied memory length and override the Intel Trusted Executable Technology (TXT) heap and SINIT ACM itself. See line 6741 below.
+ACPI table for ACMAuthenticated Code Module (ACM) is a signed binary module delivered by Intel. It is used to construct a dynamic root of trust for measurement (DRTM) environment. In 2011, Invisible Things Lab disclosed [a way to hijack the SINIT ACM](https://invisiblethingslab.com/resources/2011/Attacking_Intel_TXT_via_SINIT_hijacking.pdf). The issue happens when the ACM code parses the untrusted ACPI DMA Remapping (DMAR) table. The DMAR table is used before validation of the address. As such the attacker may control the copied memory length and override the Intel Trusted Executable Technology (TXT) heap and SINIT ACM itself. See line `6741` below.
 
 ---
 
@@ -188,77 +188,54 @@ ACPI table for ACMAuthenticated Code Module (ACM) is a signed binary module deli
 
 ---
 
-Adding a check for the length field of untrusted data source is mandatory.
+Adding a check for the length field of the untrusted data source is mandatory.
 
 ### Capsule Image {#capsule-image}
 
-Most UEFI firmware supports capsule based firmware update. In 2014, MITRE demonstrated how to use [a vulnerability in the capsule coalesce process](https://www.mitre.org/sites/default/files/publications/14-2221-extreme-escalation-presentation.pdf) to attack the firmware update process.
+Most UEFI firmware supports capsule based firmware update. In 2014, MITRE demonstrated how to use [a vulnerability in the capsule coalesce process](https://www.mitre.org/sites/default/files/publications/14-2221-extreme-escalation-presentation.pdf) to attack the firmware update process. **NOTE**: `MemorySize if` statement and `Size +=` statement below.
 
 This is another example of an integer overflow.
 
-=====================================
 
+---
+
+
+```
 EFI_STATUS
-
 EFIAPI
-
 CapsuleDataCoalesce (
-
-IN EFI_PEI_SERVICES **PeiServices,
-
-IN EFI_PHYSICAL_ADDRESS *BlockListBuffer,
-
-IN MEMORY_RESOURCE_DESCRIPTOR *MemoryResource,
-
-IN OUT VOID **MemoryBase,
-
-IN OUT UINTN *MemorySize
-
-)
-
+  IN EFI_PEI_SERVICES                **PeiServices,
+  IN EFI_PHYSICAL_ADDRESS            *BlockListBuffer,
+  IN MEMORY_RESOURCE_DESCRIPTOR      *MemoryResource,
+  IN OUT VOID                        **MemoryBase,
+  IN OUT UINTN                       *MemorySize
+  )
 {
-
-...
-
-if (*MemorySize &lt;= (CapsuleSize + DescriptorsSize)) {
-
-return EFI_BUFFER_TOO_SMALL;
-
-}
-
-...
-
+  //...
+    if (*MemorySize <= (CapsuleSize + DescriptorsSize)) {
+      return EFI_BUFFER_TOO_SMALL;
+  }
+  //...
 }
 
 EFI_STATUS
-
 GetCapsuleInfo (
-
-IN EFI_CAPSULE_BLOCK_DESCRIPTOR *Desc,
-
-IN OUT UINTN *NumDescriptors OPTIONAL,
-
-IN OUT UINTN *CapsuleSize OPTIONAL,
-
-IN OUT UINTN *CapsuleNumber OPTIONAL
-
-)
-
+  IN EFI_CAPSULE_BLOCK_DESCRIPTOR   *Desc,
+  IN OUT UINTN                      *NumDescriptors OPTIONAL,
+  IN OUT UINTN                      *CapsuleSize OPTIONAL,
+  IN OUT UINTN                      *CapsuleNumber OPTIONAL
+  )
 {
-
-...
-
-} else {
-
-Size += (UINTN) Desc-&gt;Length;
-
-Count++;
-
-...
-
+//  ...
+    } else {
+      Size += (UINTN) Desc->Length;
+      Count++;
+  ...
 }
+```
 
-=====================================
+
+---
 
 Before the code performs the addition, the code must use subtraction to check if the addition will cause an integer overflow.
 
