@@ -248,43 +248,47 @@ The attack taught us that it is a bad idea to embed security policy in a read/wr
 ### S3 Boot Script {#s3-boot-script}
 
 The S3 Boot Script is used to restore the register settings during the ACPI S3 resume process. In [CanSecWest 2015](https://cansecwest.com/slides/2015/AttacksOnUEFI_Rafal.pptx), Invisible Things Lab found some firmware implementations did not protect the S3 script or the dispatch function code, so it remained in an OS-accessible ACPI memory region. This allowed an attacker to inject malicious boot script content to bypass the silicon lock register setting in the S3 Boot Script.
+See the use of `EntryFunc`  and `EntryPoint` below.
 
-=====================================
 
+---
+
+
+```
 BootScriptExecuteDispatch (IN UINT8 *Script)
-
 {
-
-...
-
-EntryFunc = (DISPATCH_ENTRYPOINT_FUNC) (UINTN) (ScriptDispatch.EntryPoint);
-
-Status = EntryFunc (NULL, NULL);
-
+   ...
+   EntryFunc = (DISPATCH_ENTRYPOINT_FUNC) (UINTN) (ScriptDispatch.EntryPoint);
+   Status = EntryFunc (NULL, NULL);
 }
 
-=====================================
+```
+---
 
 As a mitigation, the lockbox should be used to protect data used in the S3 resume phase.
 
 ### Network for AMT {#network-for-amt}
 
-[Intel® Active Management Technology](https://www.intel.com/content/www/us/en/architecture-and-technology/intel-active-management-technology.html) (Intel® AMT) is a remote management feature in the Intel vPRO platform. In 2017, Embed disclosed [an issue with Intel AMT](https://www.blackhat.com/docs/us-17/thursday/us-17-Evdokimov-Intel-AMT-Stealth-Breakthrough.pdf) where providing an empty response will cause password verification to succeed as if the attacker provided the admin password.
+[Intel® Active Management Technology](https://www.intel.com/content/www/us/en/architecture-and-technology/intel-active-management-technology.html) (Intel® AMT) is a remote management feature in the Intel vPRO platform. In 2017, Embed disclosed [an issue with Intel AMT](https://www.blackhat.com/docs/us-17/thursday/us-17-Evdokimov-Intel-AMT-Stealth-Breakthrough.pdf) where providing an empty response will cause password verification to succeed as if the attacker provided the admin password. See the use of `strncmp` and `response.length` below.
 
-=====================================
 
+
+---
+
+
+```
 /* NETSTACK_CODE:20431FC8 */
 
 if(strncmp(computed_response, response.value, response.length))
-
 {
-
-goto error;
-
+   goto error;
 }
-
 return 0;
+```
 
-=====================================
+
+
+---
+
 
 To avoid similar issues, network packet processing code should always be carefully reviewed.
