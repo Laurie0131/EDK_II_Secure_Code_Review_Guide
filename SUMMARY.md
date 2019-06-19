@@ -30,7 +30,7 @@
 -->
 # Summary
 
-* [EDK II Secure Code Review Guide 2](README.md)
+* [EDK II Secure Code Review Guide ](README.md)
 * [Executive Summary](executive_summary.md)
 * [General Guidelines for Secure Code Review](general_guidelines_for_secure_code_review.md)
 * [Code Review Guidelines for Boot Firmware](code_review_guidelines_for_boot_firmware/README.md)
