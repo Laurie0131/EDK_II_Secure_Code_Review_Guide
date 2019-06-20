@@ -33,8 +33,6 @@
 * [EDK II Secure Code Review Guide ](README.md)
 * [Executive Summary](executive_summary.md)
 * [General Guidelines for Secure Code Review](general_guidelines_for_secure_code_review.md)
-  * [Overview](general_guidelines_for_secure_code_review.md#overview)
-  * [EDK II Secure Coding Guidelines ](general_guidelines_for_secure_code_review.md#edk-ii-secure-coding-guidelines)
 * [Code Review Guidelines for Boot Firmware](code_review_guidelines_for_boot_firmware/README.md)
   * [External Input](code_review_guidelines_for_boot_firmware/external_input.md)
   * [Race Condition](code_review_guidelines_for_boot_firmware/race_condition.md)
